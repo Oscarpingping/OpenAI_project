@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Analysis Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+        }
+        #chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 50px;
+            margin-bottom: 10px;
+        }
+        #image-container {
+            width: 3in;
+            height: 3in;
+            border: 1px solid #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        #uploaded-image {
+            max-width: 3in;
+            max-height: 3in;
+            object-fit: fill;
+        }
+        #input-container {
+            display: flex;
+            gap: 10px;
+        }
+        #file-input {
+            display: none;
+        }
+        #question-input {
+            flex: 1 50px;
+            padding: 10px;
+        }
+        button {
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <h3>Image Analysis Chat</h3>
+        <div id="image-container">
+            <img id="uploaded-image" src="" alt="Analyzed photo">
+        </div>
+        <div id="chat-messages">
+            <!-- Messages will be displayed here -->
+        </div>
+        <form id="upload-form">
+            <div id="input-container">
+                <input type="file" id="file-input" name="file" accept="image/jpeg, image/png">
+                <button type="button" onclick="document.getElementById('file-input').click()">Choose File</button>
+                <input type="text" id="question-input" name="question" placeholder="Type your question here..." required>
+                <button type="submit">Send</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let previousFile = null;
+
+        document.getElementById('file-input').addEventListener('change', function(event) {
+            const fileInput = event.target;
+            if (fileInput.files.length > 0) {
+                previousFile = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('uploaded-image').src = e.target.result;
+                };
+                reader.readAsDataURL(previousFile);
+            }
+        });
+
+        document.getElementById('upload-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const questionInput = document.getElementById('question-input');
+            const chatMessages = document.getElementById('chat-messages');
+
+            if (!questionInput.value || !previousFile) {
+                alert('Please provide both a question and an image.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('question', questionInput.value);
+            formData.append('file', previousFile);
+
+            // Display user message
+            chatMessages.innerHTML += `<p><strong>You:</strong> ${questionInput.value}</p>`;
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    chatMessages.innerHTML += `<p><strong>AI:</strong> ${result.message}</p>`;
+                } else {
+                    chatMessages.innerHTML += `<p><strong>Error:</strong> ${result.message}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                chatMessages.innerHTML += `<p><strong>Error:</strong> Could not reach the server.</p>`;
+            });
+
+            // Reset input field
+            questionInput.value = '';
+        });
+    </script>
+</body>
+</html>
